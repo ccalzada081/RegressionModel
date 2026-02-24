@@ -27,11 +27,11 @@ def main():
     df = pd.read_csv(data_path)
     df = pd.get_dummies(df, drop_first=True).astype(float)
 
-    # Feature Engineering para darle el empujón extra
+    # Feature Engineering
     if "smoker_yes" in df.columns:
         df["bmi_smoker"] = df["bmi"] * df["smoker_yes"]
 
-    # El costo sube más rápido a mayor edad (efecto cuadrático)
+    # El costo sube más rápido a mayor edad
     df["age2"] = df["age"] ** 2
 
     X = torch.tensor(df.drop("charges", axis=1).values, dtype=torch.float32)
@@ -44,7 +44,7 @@ def main():
     Y = (Y - mean_Y) / std_Y
 
     X_train, X_test, Y_train, Y_test = train_test_split(
-        X, Y, test_size=0.2, random_state=42
+        X, Y, test_size=0.2, random_state=20
     )
 
     input_size = X.shape[1]
@@ -53,8 +53,8 @@ def main():
     # Instanciar el modelo
     model = LinearRegression(input_size, output_size)
 
-    learning_rate = 0.01
-    n_iters = 5000
+    learning_rate = 0.008
+    n_iters = 30000
 
     loss_fn = nn.MSELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
@@ -69,7 +69,7 @@ def main():
         loss.backward()
         optimizer.step()
 
-        if (epoch + 1) % 1000 == 0 or epoch == n_iters - 1:
+        if (epoch + 1) % 10000 == 0 or epoch == n_iters - 1:
             with torch.no_grad():
                 y_pred_real = y_pred * std_Y + mean_Y
                 Y_train_real = Y_train * std_Y + mean_Y
