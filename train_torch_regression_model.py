@@ -37,15 +37,25 @@ def main():
     X = torch.tensor(df.drop("charges", axis=1).values, dtype=torch.float32)
     Y = torch.tensor(df["charges"].values, dtype=torch.float32).view(-1, 1)
 
-    # Normalización
-    mean_X, std_X = X.mean(dim=0), X.std(dim=0)
-    X = (X - mean_X) / std_X
-    mean_Y, std_Y = Y.mean(), Y.std()
-    Y = (Y - mean_Y) / std_Y
-
+    # separamos los datos 
     X_train, X_test, Y_train, Y_test = train_test_split(
         X, Y, test_size=0.2, random_state=20
     )
+
+    # calculamos la media y desviacion sobre el set de entrenamiento
+    mean_X_train, std_X_train = X_train.mean(dim=0), X_train.std(dim=0)
+    mean_Y_train, std_Y_train = Y_train.mean(), Y_train.std()
+
+    # aplicamos esa normalizacion a TODOS los conjuntos
+    X_train = (X_train - mean_X_train) / std_X_train
+    X_test = (
+        X_test - mean_X_train
+    ) / std_X_train # Usamos la media del Train
+
+    Y_train = (Y_train - mean_Y_train) / std_Y_train
+    Y_test = (
+        Y_test - mean_Y_train
+    ) / std_Y_train  # Usamos la media del Train
 
     input_size = X.shape[1]
     output_size = 1
@@ -71,8 +81,8 @@ def main():
 
         if (epoch + 1) % 10000 == 0 or epoch == n_iters - 1:
             with torch.no_grad():
-                y_pred_real = y_pred * std_Y + mean_Y
-                Y_train_real = Y_train * std_Y + mean_Y
+                y_pred_real = y_pred * std_Y_train + mean_Y_train
+                Y_train_real = Y_train * std_Y_train + mean_Y_train
                 real_loss = loss_fn(y_pred_real, Y_train_real).item()
             print(f"epoch {epoch+1:05d}, Train Loss = {real_loss:,.1f}")
 
@@ -82,8 +92,8 @@ def main():
         test_pred = model(X_test)
 
         # Desnormalizar predicciones
-        test_pred_real = test_pred * std_Y + mean_Y
-        Y_test_real = Y_test * std_Y + mean_Y
+        test_pred_real = test_pred * std_Y_train + mean_Y_train
+        Y_test_real = Y_test * std_Y_train + mean_Y_train
 
         # Calcular el loss en validación para confirmar que cumplimos la meta
         test_loss_real = loss_fn(test_pred_real, Y_test_real).item()
